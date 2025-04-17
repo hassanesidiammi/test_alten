@@ -5,11 +5,11 @@ namespace App\Controller;
 use App\Entity\Product;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Exception\BadRequestException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
@@ -26,9 +26,7 @@ final class ProductController extends AbstractController
     public function create(Request $request): JsonResponse
     {
         $data = $request->getContent();
-        $product = $this->serializer->deserialize($data, Product::class, 'json', [
-            ObjectNormalizer::DISABLE_TYPE_ENFORCEMENT => true,
-        ]);
+        $product = $this->serializer->deserialize($data, Product::class, 'json', []);
 
         $errors = $this->validator->validate($product);
         if (count($errors) > 0) {
@@ -71,7 +69,6 @@ final class ProductController extends AbstractController
     {
         $data = $request->getContent();
         $this->serializer->deserialize($data, Product::class, 'json', [
-            ObjectNormalizer::DISABLE_TYPE_ENFORCEMENT => true,
             'object_to_populate' => $product,
         ]);
 
