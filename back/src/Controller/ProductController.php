@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\Product;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Exception\BadRequestException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -20,11 +21,16 @@ final class ProductController extends AbstractController
         private EntityManagerInterface $em,
         private SerializerInterface $serializer,
         private ValidatorInterface $validator,
+        private Security $security
     ) {}
 
     #[Route('', name: 'products_create', methods: ['POST'])]
     public function create(Request $request): JsonResponse
     {
+        if (!$this->isAdmin()) {
+            return $this->json(['message' => 'Access denied'], 403);
+        }
+
         if ('json' !== $request->getContentTypeFormat()) {
             throw new BadRequestException('Unsupported content format');
         }
@@ -70,6 +76,10 @@ final class ProductController extends AbstractController
     #[Route('/{id}', name: 'products_update', methods: ['PATCH'])]
     public function update(Request $request, Product $product): JsonResponse
     {
+        if (!$this->isAdmin()) {
+            return $this->json(['message' => 'Access denied'], 403);
+        }
+
         $data = $request->getContent();
         $this->serializer->deserialize($data, Product::class, 'json', [
             'object_to_populate' => $product,
@@ -88,9 +98,18 @@ final class ProductController extends AbstractController
     #[Route('/{id}', name: 'products_delete', methods: ['DELETE'])]
     public function delete(Product $product): JsonResponse
     {
+        if (!$this->isAdmin()) {
+            return $this->json(['message' => 'Access denied'], 403);
+        }
+
         $this->em->remove($product);
         $this->em->flush();
 
         return $this->json(null, Response::HTTP_NO_CONTENT);
+    }
+
+    private function isAdmin(): bool
+    {
+        return $this->security->getUser()?->getEmail() === 'admin@admin.com';
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Tests\Controller;
 
+use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Response;
@@ -25,12 +26,15 @@ class ProductControllerTest extends WebTestCase
         'rating' => 5,
     ];
     private $client;
-    private $jwt;
+    private $jwt = null;
 
     protected function setUp(): void
     {
         $this->client = static::createClient();
-        $token = $this->getJwtToken();
+        if (!$this->jwt) {
+            $this->createAdminUserTest();
+            $this->jwt = $this->getJwtToken();
+        }
     }
 
     public function testCreateProduct(): void
@@ -90,6 +94,7 @@ class ProductControllerTest extends WebTestCase
 
         $this->client->request('POST', '/products', [], [], [
             'CONTENT_TYPE' => 'application/json',
+            'HTTP_Authorization' => 'Bearer ' . $this->jwt
         ], json_encode($data));
 
         $this->assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
@@ -118,6 +123,7 @@ class ProductControllerTest extends WebTestCase
 
         $this->client->request('PATCH', '/products/' . $id, [], [], [
             'CONTENT_TYPE' => 'application/json',
+            'HTTP_Authorization' => 'Bearer ' . $this->jwt
         ], json_encode($updatedData));
 
         $this->assertResponseIsSuccessful();
@@ -127,10 +133,12 @@ class ProductControllerTest extends WebTestCase
     public function testDeleteProduct(): void
     {
         $id = $this->createProductForTest();
-        $this->client->request('GET', '/products/' . $id);
+        $this->client->request('GET', '/products/' . $id, [], [], [
+            'CONTENT_TYPE' => 'application/json',
+        ]);
         $this->assertResponseStatusCodeSame(Response::HTTP_OK);
 
-        $this->client->request('DELETE', '/products/' . $id);
+        $this->client->request('DELETE', '/products/' . $id, [], [], ['HTTP_Authorization' => 'Bearer ' . $this->jwt]);
 
         $this->assertResponseIsSuccessful();
         $this->assertResponseStatusCodeSame(Response::HTTP_NO_CONTENT);
@@ -169,6 +177,7 @@ class ProductControllerTest extends WebTestCase
 
         $this->client->request('POST', '/products', [], [], [
             'CONTENT_TYPE' => 'application/x-www-form-urlencoded',
+            'HTTP_Authorization' => 'Bearer ' . $this->jwt
         ], $data);
 
         $this->assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
@@ -181,6 +190,7 @@ class ProductControllerTest extends WebTestCase
     {
         $this->client->request('POST', '/products', [], [], [
             'CONTENT_TYPE' => 'application/json',
+            'HTTP_Authorization' => 'Bearer ' . $this->jwt
         ], json_encode(self::DATA));
 
         $this->assertResponseStatusCodeSame(Response::HTTP_CREATED);
@@ -188,18 +198,24 @@ class ProductControllerTest extends WebTestCase
         return json_decode($this->client->getResponse()->getContent(), true)['id'];
     }
 
-    private function getJwtToken(): string
+    private function createAdminUserTest(): void
     {
-        try {
+        $userRepository = self::getContainer()->get('doctrine')->getManager()->getRepository(User::class);
+
+        $existingUser = $userRepository->findOneBy(['email' => self::ADMIN_EMAIL]);
+
+        if (!$existingUser) {
             $this->client->request('POST', '/account', [], [], ['CONTENT_TYPE' => 'application/json'], json_encode([
                 'username' => 'admin',
                 'firstname' => self::ADMIN_EMAIL,
                 'email' => 'admin@admin.com',
                 'password' => self::ADMIN_PASS,
             ]));
-        } catch (\Throwable $th) {
-            // User alrady exists!
         }
+    }
+
+    private function getJwtToken(): string
+    {
         $this->client->request('POST', '/token', [], [], ['CONTENT_TYPE' => 'application/json'], json_encode([
             'email' => self::ADMIN_EMAIL,
             'password' => self::ADMIN_PASS,
