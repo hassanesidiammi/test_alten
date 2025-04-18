@@ -8,6 +8,9 @@ use Symfony\Component\HttpFoundation\Response;
 
 class ProductControllerTest extends WebTestCase
 {
+    const ADMIN_EMAIL = 'admin@admin.com';
+    const ADMIN_PASS  = 'admin';
+
     const DATA = [
         'code' => 'ABCD123',
         'name' => 'Test Product ABCD123',
@@ -22,16 +25,19 @@ class ProductControllerTest extends WebTestCase
         'rating' => 5,
     ];
     private $client;
+    private $jwt;
 
     protected function setUp(): void
     {
         $this->client = static::createClient();
+        $token = $this->getJwtToken();
     }
 
     public function testCreateProduct(): void
     {
         $this->client->request('POST', '/products', [], [], [
             'CONTENT_TYPE' => 'application/json',
+            'HTTP_Authorization' => 'Bearer ' . $this->jwt
         ], json_encode(self::DATA));
 
         $this->assertResponseIsSuccessful();
@@ -180,5 +186,29 @@ class ProductControllerTest extends WebTestCase
         $this->assertResponseStatusCodeSame(Response::HTTP_CREATED);
 
         return json_decode($this->client->getResponse()->getContent(), true)['id'];
+    }
+
+    private function getJwtToken(): string
+    {
+        try {
+            $this->client->request('POST', '/account', [], [], ['CONTENT_TYPE' => 'application/json'], json_encode([
+                'username' => 'admin',
+                'firstname' => self::ADMIN_EMAIL,
+                'email' => 'admin@admin.com',
+                'password' => self::ADMIN_PASS,
+            ]));
+        } catch (\Throwable $th) {
+            // User alrady exists!
+        }
+        $this->client->request('POST', '/token', [], [], ['CONTENT_TYPE' => 'application/json'], json_encode([
+            'email' => self::ADMIN_EMAIL,
+            'password' => self::ADMIN_PASS,
+            'roles' => ['ROLE_ADMIN'],
+        ]));
+
+        $this->assertResponseIsSuccessful();
+        $data = json_decode($this->client->getResponse()->getContent(), true);
+
+        return $data['token'];
     }
 }

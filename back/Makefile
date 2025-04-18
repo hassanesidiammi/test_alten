@@ -13,3 +13,10 @@ shell:
 
 logs:
 	$(DC) logs -f php
+
+jwt:
+	@echo "Fixing permissions..."
+	$(DC) exec php chown -R www-data:www-data var/ config/jwt/
+	@echo "Generating JWT keypair..."
+	$(DC) exec php php bin/console lexik:jwt:generate-keypair --overwrite
+
