@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\UserRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
@@ -37,6 +39,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[ORM\Column(length: 100)]
     private ?string $username = null;
+
+    #[ORM\OneToOne(targetEntity: Cart::class, mappedBy: 'owner', cascade: ['remove'])]
+    private ?Cart $cart = null;
+
+    public function __construct() {}
 
     public function getId(): ?int
     {
@@ -133,6 +140,22 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setUsername(string $username): static
     {
         $this->username = $username;
+
+        return $this;
+    }
+
+    public function getCart(): ?Cart
+    {
+        return $this->cart;
+    }
+
+    public function setCart(Cart $cart): static
+    {
+        if ($this !== $cart->getOwner()) {
+            $cart->setOwner($this);
+        }
+
+        $this->cart = $cart;
 
         return $this;
     }

@@ -9,22 +9,8 @@ use Symfony\Component\HttpFoundation\Response;
 
 class ProductControllerTest extends WebTestCase
 {
-    const ADMIN_EMAIL = 'admin@admin.com';
-    const ADMIN_PASS  = 'admin';
+    use TestTrait;
 
-    const DATA = [
-        'code' => 'ABCD123',
-        'name' => 'Test Product ABCD123',
-        'description' => 'Un produit ABCD123 Un produit ABCD123 Un produit ABCD123 ',
-        'price' => 99.99,
-        'quantity' => 10,
-        'category' => 'Electronics',
-        'image' => 'image.jpg',
-        'internalReference' => 'REF123',
-        'shellId' => 1,
-        'inventoryStatus' => 'INSTOCK',
-        'rating' => 5,
-    ];
     private $client;
     private $jwt = null;
 
@@ -32,7 +18,7 @@ class ProductControllerTest extends WebTestCase
     {
         $this->client = static::createClient();
         if (!$this->jwt) {
-            $this->createAdminUserTest();
+            $this->createUserTest();
             $this->jwt = $this->getJwtToken();
         }
     }
@@ -181,50 +167,5 @@ class ProductControllerTest extends WebTestCase
         ], $data);
 
         $this->assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
-    }
-
-    /**
-     * Produit de test (utilisé dans d'autres tests)
-     */
-    private function createProductForTest(): int
-    {
-        $this->client->request('POST', '/products', [], [], [
-            'CONTENT_TYPE' => 'application/json',
-            'HTTP_Authorization' => 'Bearer ' . $this->jwt
-        ], json_encode(self::DATA));
-
-        $this->assertResponseStatusCodeSame(Response::HTTP_CREATED);
-
-        return json_decode($this->client->getResponse()->getContent(), true)['id'];
-    }
-
-    private function createAdminUserTest(): void
-    {
-        $userRepository = self::getContainer()->get('doctrine')->getManager()->getRepository(User::class);
-
-        $existingUser = $userRepository->findOneBy(['email' => self::ADMIN_EMAIL]);
-
-        if (!$existingUser) {
-            $this->client->request('POST', '/account', [], [], ['CONTENT_TYPE' => 'application/json'], json_encode([
-                'username' => 'admin',
-                'firstname' => self::ADMIN_EMAIL,
-                'email' => 'admin@admin.com',
-                'password' => self::ADMIN_PASS,
-            ]));
-        }
-    }
-
-    private function getJwtToken(): string
-    {
-        $this->client->request('POST', '/token', [], [], ['CONTENT_TYPE' => 'application/json'], json_encode([
-            'email' => self::ADMIN_EMAIL,
-            'password' => self::ADMIN_PASS,
-            'roles' => ['ROLE_ADMIN'],
-        ]));
-
-        $this->assertResponseIsSuccessful();
-        $data = json_decode($this->client->getResponse()->getContent(), true);
-
-        return $data['token'];
     }
 }
