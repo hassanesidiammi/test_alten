@@ -31,6 +31,7 @@ final class CartController extends AbstractController
         $data = json_decode($request->getContent(), true);
         $user = $this->getUser();
         $cart = $user->getCart() ?? new Cart();
+
         if (!$user->getCart()) {
             $cart->setOwner($user);
             $em->persist($cart);
@@ -41,19 +42,12 @@ final class CartController extends AbstractController
             return $this->json(['error' => 'Product not found'], 404);
         }
 
-        foreach ($cart->getItems() as $item) {
-            if ($item->getProduct() === $product) {
-                $item->setQuantity($item->getQuantity() + $data['quantity']);
-                $em->flush();
-                return $this->json(['message' => 'Product quantity updated']);
-            }
+        try {
+            $cart->addProduct($product, $data['quantity']);
+        } catch (\LogicException $e) {
+            return $this->json(['error' => $e->getMessage()], 400);
         }
 
-        $item = new CartItem();
-        $item->setCart($cart);
-        $item->setProduct($product);
-        $item->setQuantity($data['quantity']);
-        $em->persist($item);
         $em->flush();
 
         return $this->json(['message' => 'Product added to cart']);

@@ -22,7 +22,7 @@ class Cart
     /**
      * @var Collection<int, CartItem>
      */
-    #[ORM\OneToMany(targetEntity: CartItem::class, mappedBy: 'cart', orphanRemoval: true)]
+    #[ORM\OneToMany(mappedBy: 'cart', targetEntity: CartItem::class, cascade: ['persist'], orphanRemoval: true)]
     private Collection $items;
 
     public function __construct()
@@ -79,9 +79,12 @@ class Cart
 
     public function addProduct(Product $product, int $quantity = 1): static
     {
+        if ($product->getInventoryStatus() !== 'INSTOCK') {
+            throw new \LogicException('Ce produit n’est pas disponible.');
+        }
+
         foreach ($this->items as $item) {
             if ($item->getProduct() === $product) {
-                // Incrémente la quantité
                 $item->setQuantity($item->getQuantity() + $quantity);
                 return $this;
             }

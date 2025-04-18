@@ -63,7 +63,7 @@ trait TestTrait
         $this->client->request('POST', '/products', [], [], [
             'CONTENT_TYPE' => 'application/json',
             'HTTP_Authorization' => 'Bearer ' . $this->jwt
-        ], json_encode(self::DATA));
+        ], json_encode($payload));
 
         $this->assertResponseStatusCodeSame(Response::HTTP_CREATED);
 

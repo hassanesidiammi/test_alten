@@ -64,6 +64,47 @@ class CartControllerTest extends WebTestCase
         $this->assertResponseStatusCodeSame(Response::HTTP_OK);
     }
 
+    public function testAddOuofstockProductToCart()
+    {
+        $this->getJwtToken([
+            'email' => self::ADMIN_EMAIL,
+            'password' => self::ADMIN_PASS,
+        ]);
+        $productId = $this->createProductForTest([
+            'code' => 'EF5251',
+            'name' => 'Test Product EF5251',
+            'description' => 'Un produit EF5251 Un produit EF5251 Un produit EF5251 ',
+            'price' => 99.99,
+            'quantity' => 10,
+            'category' => 'Electronics',
+            'image' => 'image.jpg',
+            'internalReference' => 'REF123',
+            'shellId' => 1,
+            'inventoryStatus' => 'OUTOFSTOCK',
+            'rating' => 5,
+        ]);
+
+
+        $this->getJwtToken([
+            'email' => 'testuser@example.com',
+            'password' => 'password123',
+        ]);
+
+        $this->client->request('POST', '/cart/add', [], [], [
+            'HTTP_Authorization' => 'Bearer ' . $this->jwt,
+        ], json_encode([
+            'productId' => $productId,
+            'quantity' => 1,
+        ]));
+
+        $this->assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
+        $this->assertJson($this->client->getResponse()->getContent());
+
+        $data = json_decode($this->client->getResponse()->getContent(), true);
+        $this->assertArrayHasKey('error', $data);
+        $this->assertStringContainsString('pas disponible.', $data['error']);
+    }
+
     public function testRemoveProductFromCart()
     {
         $userRepository = $this->em->getRepository(User::class);
