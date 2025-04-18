@@ -25,6 +25,9 @@ final class ProductController extends AbstractController
     #[Route('', name: 'products_create', methods: ['POST'])]
     public function create(Request $request): JsonResponse
     {
+        if ('json' !== $request->getContentTypeFormat()) {
+            throw new BadRequestException('Unsupported content format');
+        }
         $data = $request->getContent();
         $product = $this->serializer->deserialize($data, Product::class, 'json', []);
 
