@@ -43,6 +43,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToOne(targetEntity: Cart::class, mappedBy: 'owner', cascade: ['remove'])]
     private ?Cart $cart = null;
 
+    #[ORM\OneToOne(mappedBy: 'owner', cascade: ['persist', 'remove'])]
+    private ?Wishlist $wishlist = null;
+
     public function __construct() {}
 
     public function getId(): ?int
@@ -156,6 +159,22 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         }
 
         $this->cart = $cart;
+
+        return $this;
+    }
+
+    public function getWishlist(): ?Wishlist
+    {
+        return $this->wishlist;
+    }
+
+    public function setWishlist(?Wishlist $wishlist): static
+    {
+        $this->wishlist = $wishlist;
+
+        if ($this !== $wishlist->getOwner()) {
+            $wishlist->setOwner($this);
+        }
 
         return $this;
     }
